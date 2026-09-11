@@ -21,13 +21,32 @@ writeFileSync(settingsFile, JSON.stringify({ defaultMode: "force", safeReasoning
 // --- fake services ----------------------------------------------------------
 const registeredCommands = [];
 
+// The fake session mirrors the REAL DSH 0.1.5 `Session` contract, deliberately
+// WITHOUT the `events` getter that 0.1.1 published and the kernel later removed.
+// Keeping the double faithful is the point: an earlier version of this file
+// exposed `session.events`, which let the plugin keep reading a property the
+// running kernel no longer provides and turned every /pause and /resume into a
+// TypeError in production while this suite stayed green.
 const session = {
-  events: [],
+  id: "session-1",
   seq: 0,
+  eventsLog: [],
   append(type, data) {
     const event = { type, data, seq: this.seq++, time: Date.now() };
-    this.events.push(event);
+    this.eventsLog.push(event);
     return event;
+  },
+  /** Full immutable snapshot (the accessor the plugin must use). */
+  snapshotEvents() {
+    return this.eventsLog;
+  },
+  /** Child-owned events after any fork prefix (same log here — no forks). */
+  ownEvents() {
+    return this.eventsLog;
+  },
+  /** One exact event by sequence number. */
+  eventAt(seq) {
+    return this.eventsLog[seq];
   }
 };
 
@@ -117,12 +136,7 @@ try {
   const invocation = (agent) => ({ agent, rawInput: "", commandId: "t1" });
 
   // --- pause while running -----------------------------------------------------
-  session.events.push({
-    type: "user/message",
-    data: { id: "m1", role: "user", content: [{ type: "text", text: "do the thing" }], source: { kind: "user" } },
-    seq: 0,
-    time: 1
-  });
+  session.append("user/message", { id: "m1", role: "user", content: [{ type: "text", text: "do the thing" }], source: { kind: "user" } });
   fakeAgent.status = "running";
   const pausedResult = await handler("pause")(invocation(fakeAgent));
   console.log("pause ->", pausedResult);
@@ -160,7 +174,7 @@ try {
   if (taskControl.state(fakeAgent.id).paused !== false) throw new Error("cancel did not clear paused state");
 
   // --- Route A invariant: no custom session event types written ---------------
-  const custom = session.events.filter((e) => e.type === "task-control/paused" || e.type === "task-control/resumed");
+  const custom = session.snapshotEvents().filter((e) => e.type === "task-control/paused" || e.type === "task-control/resumed");
   if (custom.length > 0) throw new Error("task-control must NOT write custom session event types (sessions would become unloadable)");
   console.log("Route A: no task-control/* session events written");
 
@@ -174,12 +188,7 @@ try {
   if (unknownPause.ok !== false || typeof unknownPause.error !== "string") throw new Error("pause(unknown) should fail softly");
 
   // pause by session id while running
-  session.events.push({
-    type: "user/message",
-    data: { id: "m2", role: "user", content: [{ type: "text", text: "service task" }], source: { kind: "user" } },
-    seq: 5,
-    time: 6
-  });
+  session.append("user/message", { id: "m2", role: "user", content: [{ type: "text", text: "service task" }], source: { kind: "user" } });
   fakeAgent.status = "running";
   const svcPause = taskControl.pause(fakeAgent.id);
   console.log("service pause ->", JSON.stringify(svcPause));
