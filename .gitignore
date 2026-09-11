@@ -1,3 +1,5 @@
 node_modules/
 .DS_Store
 *.log
+# Local compatibility-audit working note (not part of the plugin).
+COMPAT-REPORT.md

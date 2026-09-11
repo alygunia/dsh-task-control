@@ -10,7 +10,7 @@ English | [中文](README.md)
 
 Adds task **pause, resume, and cancel** controls to DSH Web. Supports safe and force pause, then resumes from the pause point without repeating completed work.
 
-Currently adapted to DSH v0.1.1-rc.2 (latest version).
+Currently adapted to DSH v0.1.5-rc.2 (the `@deepseek-ai/dsh` CLI is 0.1.5-rc.1, the kernel packages 0.1.5-rc.2).
 
 ## Installation
 
@@ -83,10 +83,17 @@ Pause state is stored under `~/.dsh/task-control/` and survives restarts. Tests 
 | New messages while paused | Start a new turn; pause controls only the current turn |
 | Scheduled reminders | Due `dsh-schedule` reminders still wake the session |
 | Subagents | Already-dispatched subagents are not interrupted with the parent |
-| State sync | The browser polls every 2 seconds; restart dsh web after plugin changes |
+| State sync | The browser polls every 2 seconds while running or paused (no polling when idle and unpaused; polling pauses while the tab is hidden); restart dsh web after plugin changes |
 
 ## Test
 
 ```bash
-node test/host-smoke.mjs
+node test/run.mjs
 ```
+
+`test/run.mjs` resolves `@deepseek-ai/*` from the installed DSH profile (it probes `~/.dsh/profiles/*/node_modules`; override with `DSH_PROFILE_MODULES`) and runs:
+
+| Suite | Coverage |
+|---|---|
+| `test/host-smoke.mjs` | Commands, service, routes, durable state, pause-granularity settings (against a contract-faithful session double) |
+| `test/host-real-session.mjs` | `/pause` and `/resume confirm rerun\|skip` against a **real kernel `Session`**, guarding the log-reading API against another drift |

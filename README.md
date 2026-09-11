@@ -10,7 +10,7 @@
 
 为 DSH Web 增加任务**暂停、恢复和取消**能力。支持安全暂停与强制暂停，恢复时从暂停点继续，不重复已完成的工作。
 
-当前适配 DSH v0.1.1-rc.2（最新版本）。
+当前适配 DSH v0.1.5-rc.2（`@deepseek-ai/dsh` CLI 0.1.5-rc.1，内核包 0.1.5-rc.2）。
 
 ## 安装
 
@@ -83,10 +83,17 @@ dsh plugin --profile web add github:p2coder/dsh-task-control
 | 暂停期间发送新消息 | 会开启新回合；暂停只控制当前回合 |
 | 定时提醒 | `dsh-schedule` 到期后仍会唤醒 |
 | 子代理 | 已派发的子代理不会被父任务暂停 |
-| 状态同步 | 浏览器每 2 秒轮询一次，修改插件后需重启 dsh web |
+| 状态同步 | 浏览器在“运行中或已暂停”时每 2 秒轮询一次（空闲且未暂停时不轮询，页面隐藏时暂停轮询）；修改插件后需重启 dsh web |
 
 ## 测试
 
 ```bash
-node test/host-smoke.mjs
+node test/run.mjs
 ```
+
+`test/run.mjs` 会从已安装的 DSH profile 解析 `@deepseek-ai/*` 依赖（自动探测 `~/.dsh/profiles/*/node_modules`，也可用 `DSH_PROFILE_MODULES` 指定），随后依次运行：
+
+| 用例 | 覆盖 |
+|---|---|
+| `test/host-smoke.mjs` | 命令、服务、路由、durable 状态、暂停粒度设置的完整行为（契约保真的 session 替身） |
+| `test/host-real-session.mjs` | 直接对**真实内核 `Session`** 跑 `/pause`、`/resume confirm rerun\|skip`，防止 session 读取 API 再次漂移 |
