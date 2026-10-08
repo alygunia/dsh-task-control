@@ -17,7 +17,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
-const suites = ["host-smoke.mjs", "host-real-session.mjs"];
+const suites = ["plugin-compatibility.mjs", "host-smoke.mjs", "host-real-session.mjs"];
 
 /** Candidate `profiles/node_modules` roots, most specific first. */
 function candidateModuleRoots() {
